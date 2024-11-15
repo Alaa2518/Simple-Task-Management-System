@@ -63,6 +63,7 @@ class TaskController extends Controller
     {
         try {
             $this->taskRepository->delete($task);
+
             return $this->successResponse(null, 'Task deleted successfully.');
         } catch (Exception $e) {
             return $this->errorResponse($e->getMessage());
@@ -73,8 +74,8 @@ class TaskController extends Controller
     public function assign(AssignTaskRequest $request, Task $task)
     {
         try {
-            Cache::forget('users_list');
             $task = $this->taskRepository->assign($task, $request->user_ids);
+
 
             return $this->successResponse($task, 'Task assigned successfully.');
         } catch (Exception $e) {
@@ -86,8 +87,8 @@ class TaskController extends Controller
     public function updateStatus(UpdateStatusTaskRequest $request, Task $task)
     {
         try {
-            Cache::forget('users_list');
             $task = $this->taskRepository->updateStatus($task, $request->status);
+
 
             return $this->successResponse($task, 'Task status updated successfully.');
         } catch (Exception $e) {

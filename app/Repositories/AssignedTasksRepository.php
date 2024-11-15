@@ -12,12 +12,9 @@ class AssignedTasksRepository
             ->when($filters['status'], function ($query, $status) {
                 return $query->where('status', $status);
             })
-            ->when($filters['priority'], function ($query, $priority) {
-                return $query->where('priority', $priority);
-            })
             ->when($filters['assignee_id'], function ($query, $assigneeId) {
-                return $query->whereHas('users', function ($query) use ($assigneeId) {
-                    $query->where('users.id', $assigneeId);
+                return $query->whereHas('assignedUsers', function ($query) use ($assigneeId) {
+                    $query->where('assign_user_tasks.user_id', $assigneeId);
                 });
             })
             ->paginate($tasksPerPage);

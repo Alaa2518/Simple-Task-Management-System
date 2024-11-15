@@ -32,23 +32,13 @@ class DashboardController extends Controller
             // Retrieve filters from the request
             $filters = [
                 'status' => $request->input('status'),
-                'priority' => $request->input('priority'),
-                'assignee_id' => $request->input('assignee_id'),
+                'assignee_id' => $request->input(key: 'assignee_id'),
             ];
 
-            // Cache key with filters to differentiate cached results
-            $cacheKeyAssigned = 'assigned_tasks_' . md5(json_encode([$user->id, $filters, $tasksPerPage]));
-            $cacheKeyCreated = 'created_tasks_' . md5(json_encode([$user->id, $filters, $tasksPerPage]));
+            $assignedTasks = $this->assignedTasksRepository->getAssignedTasks($user, $filters, $tasksPerPage);
 
-            // Retrieve assigned tasks from cache or query repository
-            $assignedTasks = Cache::remember($cacheKeyAssigned, 3600, function () use ($user, $filters, $tasksPerPage) {
-                return $this->assignedTasksRepository->getAssignedTasks($user, $filters, $tasksPerPage);
-            });
+            $createdTasks = $this->createdTasksRepository->getCreatedTasks($user->id, $filters, $tasksPerPage);
 
-            // Retrieve created tasks from cache or query repository
-            $createdTasks = Cache::remember($cacheKeyCreated, 3600, function () use ($user, $filters, $tasksPerPage) {
-                return $this->createdTasksRepository->getCreatedTasks($user->id, $filters, $tasksPerPage);
-            });
 
             // Return response with pagination details
             return $this->successResponse([
