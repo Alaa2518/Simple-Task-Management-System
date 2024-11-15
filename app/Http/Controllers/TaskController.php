@@ -1,6 +1,10 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AssignTaskRequest;
+use App\Http\Requests\CreateTaskRequest;
+use App\Http\Requests\UpdateStatusTaskRequest;
+use App\Http\Requests\UpdateTaskRequest;
 use Exception;
 use App\Models\Task;
 use App\Models\User;
@@ -13,14 +17,9 @@ class TaskController extends Controller
 {
     use ApiResponseTrait;
     // Store a new task
-    public function store(Request $request)
+    public function store(CreateTaskRequest $request)
     {
         try{
-            $request->validate([
-                'title'       => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'due_date'    => 'nullable|date',
-            ]);
 
             $task = Task::create([
                 'title'       => $request->title,
@@ -39,14 +38,9 @@ class TaskController extends Controller
     }
 
     // Update an existing task
-    public function update(Request $request, Task $task)
+    public function update(UpdateTaskRequest $request, Task $task)
     {
         try{
-            $request->validate([
-                'title'       => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'due_date'    => 'nullable|date',
-            ]);
 
             $task->update([
                 'title'       => $request->title,
@@ -77,13 +71,10 @@ class TaskController extends Controller
     }
 
     // Assign task to users
-    public function assign(Request $request, Task $task)
+    public function assign(AssignTaskRequest $request, Task $task)
     {
         try{
-            $request->validate([
-                'user_ids'   => 'required|array',
-                'user_ids.*' => 'exists:users,id', // Ensure each user ID exists
-            ]);
+
             Cache::forget('users_list');
 
             // Attach users to the task
@@ -96,13 +87,9 @@ class TaskController extends Controller
         }
     }
 
-    public function updateStatus(Request $request, Task $task)
+    public function updateStatus(UpdateStatusTaskRequest $request, Task $task)
     {
         try{
-            $request->validate([
-                'status' => 'required|string|in:open,in_progress,completed',
-            ]);
-
             $task->update([
                 'status' => $request->status,
             ]);
