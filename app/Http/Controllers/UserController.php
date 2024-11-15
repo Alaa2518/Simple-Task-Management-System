@@ -2,28 +2,34 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
-use App\Models\User;
-use Illuminate\Http\Request;
 use App\Traits\ApiResponseTrait;
-use Illuminate\Support\Facades\Cache;
+use App\Repositories\UserRepository;
+use Exception;
 
 class UserController extends Controller
 {
     use ApiResponseTrait;
+
+    protected $userRepository;
+
+    public function __construct(UserRepository $userRepository)
+    {
+        $this->userRepository = $userRepository;
+    }
+
+    /**
+     * Retrieve the list of users.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index()
     {
-        try{
-            $users = Cache::remember('users_list', 3600, function () {
-                return User::select('id', 'name')->get();
-            });
+        try {
+            $users = $this->userRepository->getCachedUsers();
 
-            return $this->successResponse($users,'Users data retrieved successfully.');
-        }
-        catch(Exception $e)
-        {
+            return $this->successResponse($users, 'Users data retrieved successfully.');
+        } catch (Exception $e) {
             return $this->errorResponse($e->getMessage());
         }
-
     }
 }
