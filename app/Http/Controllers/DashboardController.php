@@ -3,50 +3,61 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Task;
+use App\Repositories\AssignedTasksRepository;
+use App\Repositories\CreatedTasksRepository;
+use Illuminate\Support\Facades\Cache;
+use App\Traits\ApiResponseTrait;
+use Exception;
 
 class DashboardController extends Controller
 {
+    use ApiResponseTrait;
+
+    protected $assignedTasksRepository;
+    protected $createdTasksRepository;
+
+    public function __construct(AssignedTasksRepository $assignedTasksRepository,
+                                CreatedTasksRepository $createdTasksRepository)
+    {
+        $this->assignedTasksRepository = $assignedTasksRepository;
+        $this->createdTasksRepository = $createdTasksRepository;
+    }
+
     public function index(Request $request)
     {
-        $user = $request->user();
-        $tasksPerPage = 10; // Number of tasks per page
+        try {
+            $user = $request->user();
+            $tasksPerPage = $request->input('tasks_per_page', 10); // Customizable page size with a default of 10
 
-        // Retrieve filters from the request
-        $status = $request->input('status');
-        $priority = $request->input('priority');
-        $assigneeId = $request->input('assignee_id');
+            // Retrieve filters from the request
+            $filters = [
+                'status' => $request->input('status'),
+                'priority' => $request->input('priority'),
+                'assignee_id' => $request->input('assignee_id'),
+            ];
 
-        // Filter tasks assigned to the user
-        $assignedTasksQuery = $user->tasks()->when($status, function ($query, $status) {
-            return $query->where('status', $status);
-        })->when($priority, function ($query, $priority) {
-            return $query->where('priority', $priority);
-        })->when($assigneeId, function ($query, $assigneeId) {
-            return $query->whereHas('users', function ($query) use ($assigneeId) {
-                $query->where('users.id', $assigneeId);
-            });
-        });
+            // Cache key with filters to differentiate cached results
+            $cacheKeyAssigned = 'assigned_tasks_' . md5(json_encode([$user->id, $filters, $tasksPerPage]));
+            $cacheKeyCreated = 'created_tasks_' . md5(json_encode([$user->id, $filters, $tasksPerPage]));
 
-        $assignedTasks = $assignedTasksQuery->paginate($tasksPerPage);
-
-        // Filter tasks created by the user
-        $createdTasksQuery = Task::where('created_by', $user->id)
-            ->when($status, function ($query, $status) {
-                return $query->where('status', $status);
-            })->when($priority, function ($query, $priority) {
-                return $query->where('priority', $priority);
-            })->when($assigneeId, function ($query, $assigneeId) {
-                return $query->whereHas('users', function ($query) use ($assigneeId) {
-                    $query->where('users.id', $assigneeId);
-                });
+            // Retrieve assigned tasks from cache or query repository
+            $assignedTasks = Cache::remember($cacheKeyAssigned, 3600, function () use ($user, $filters, $tasksPerPage) {
+                return $this->assignedTasksRepository->getAssignedTasks($user, $filters, $tasksPerPage);
             });
 
-        $createdTasks = $createdTasksQuery->paginate($tasksPerPage);
+            // Retrieve created tasks from cache or query repository
+            $createdTasks = Cache::remember($cacheKeyCreated, 3600, function () use ($user, $filters, $tasksPerPage) {
+                return $this->createdTasksRepository->getCreatedTasks($user->id, $filters, $tasksPerPage);
+            });
 
-        return response()->json([
-            'assigned_tasks' => $assignedTasks,
-            'created_tasks' => $createdTasks,
-        ]);
+            // Return response with pagination details
+            return $this->successResponse([
+                'assigned_tasks' => $assignedTasks,
+                'created_tasks' => $createdTasks,
+            ], 'Dashboard data retrieved successfully');
+
+        } catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
 }

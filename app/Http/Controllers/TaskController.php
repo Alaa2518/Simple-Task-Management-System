@@ -1,85 +1,117 @@
 <?php
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use Exception;
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Http\Request;
+use App\Traits\ApiResponseTrait;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class TaskController extends Controller
 {
+    use ApiResponseTrait;
     // Store a new task
     public function store(Request $request)
     {
-        $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'due_date'    => 'nullable|date',
-        ]);
+        try{
+            $request->validate([
+                'title'       => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'due_date'    => 'nullable|date',
+            ]);
 
-        $task = Task::create([
-            'title'       => $request->title,
-            'description' => $request->description,
-            'due_date'    => $request->due_date,
-            'user_id'     => Auth::id(),
-            'status'      => 'open',
-        ]);
+            $task = Task::create([
+                'title'       => $request->title,
+                'description' => $request->description,
+                'due_date'    => $request->due_date,
+                'user_id'     => Auth::id(),
+                'status'      => 'open',
+            ]);
 
-        return response()->json(['task' => $task, 'message' => 'Task created successfully'], 200);
+            return $this->successResponse($task,'Task created successfully.');
+        }
+        catch(Exception $e)
+        {
+            return $this->errorResponse($e->getMessage());
+        }
     }
 
     // Update an existing task
     public function update(Request $request, Task $task)
     {
-        $request->validate([
-            'title'       => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'due_date'    => 'nullable|date',
-        ]);
+        try{
+            $request->validate([
+                'title'       => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'due_date'    => 'nullable|date',
+            ]);
 
-        $task->update([
-            'title'       => $request->title,
-            'description' => $request->description,
-            'due_date'    => $request->due_date,
-        ]);
+            $task->update([
+                'title'       => $request->title,
+                'description' => $request->description,
+                'due_date'    => $request->due_date,
+            ]);
 
-        return response()->json(['task' => $task, 'message' => 'Task updated successfully']);
+            return $this->successResponse($task,'Task updated successfully.');
+        }
+        catch(Exception $e)
+        {
+            return $this->errorResponse($e->getMessage());
+        }
     }
 
     // Delete an existing task
     public function destroy(Task $task)
     {
-        $this->authorize('delete', $task); // Ensure the user has permission to delete the task
+        try{
 
-        $task->delete();
-
-        return response()->json(['message' => 'Task deleted successfully']);
+            $task->delete();
+            return $this->successResponse(null,'Task deleted successfully');
+        }
+        catch(Exception $e)
+        {
+            return $this->errorResponse($e->getMessage());
+        }
     }
 
     // Assign task to users
     public function assign(Request $request, Task $task)
     {
-        $request->validate([
-            'user_ids'   => 'required|array',
-            'user_ids.*' => 'exists:users,id', // Ensure each user ID exists
-        ]);
+        try{
+            $request->validate([
+                'user_ids'   => 'required|array',
+                'user_ids.*' => 'exists:users,id', // Ensure each user ID exists
+            ]);
+            Cache::forget('users_list');
 
-        // Attach users to the task
-        $task->users()->sync($request->user_ids);
+            // Attach users to the task
+            $task->users()->sync($request->user_ids);
 
-        return response()->json(['task' => $task->load('users'), 'message' => 'Task assigned successfully']);
+            return $this->successResponse($task->load('users'),'Task assigned successfully');
+        }
+        catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
 
     public function updateStatus(Request $request, Task $task)
     {
-        $request->validate([
-            'status' => 'required|string|in:open,in_progress,completed',
-        ]);
+        try{
+            $request->validate([
+                'status' => 'required|string|in:open,in_progress,completed',
+            ]);
 
-        $task->update([
-            'status' => $request->status,
-        ]);
+            $task->update([
+                'status' => $request->status,
+            ]);
+            Cache::forget('users_list');
 
-        return response()->json(['task' => $task, 'message' => 'Task status updated successfully']);
+            return $this->successResponse($task,'Task status updated successfully');
+        }
+        catch (Exception $e) {
+            return $this->errorResponse($e->getMessage(), 500);
+        }
     }
 }
