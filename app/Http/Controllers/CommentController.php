@@ -22,11 +22,10 @@ class CommentController extends Controller
     public function store(CommentRequest $request, Task $task)
     {
         try{
-            // Prepare data for the comment
             $data = [
                 'task_id' => $task->id,
                 'user_id' => Auth::id(),
-                'content' => $request->input('content'),
+                'comment' => $request->content,
             ];
 
             // Store the comment using the repository
