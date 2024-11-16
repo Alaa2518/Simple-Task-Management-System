@@ -17,6 +17,8 @@ class CreatedTasksRepository
                     $query->where('assign_user_tasks.user_id', $assigneeId);
                 });
             })
+            ->with(['user','assignedUsers','comments'])
+            ->orderBy('created_at', 'DESC')
             ->paginate($tasksPerPage);
     }
 }
