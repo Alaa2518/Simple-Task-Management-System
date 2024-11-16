@@ -24,8 +24,8 @@ class TaskRepository
 
     public function assign(Task $task, array $userIds)
     {
-        $task->users()->sync($userIds);
-        return $task->load('users');
+        $task->assignedUsers()->sync(ids: $userIds);
+        return $task->load(['assignedUsers','user']);
     }
 
     public function updateStatus(Task $task, string $status)

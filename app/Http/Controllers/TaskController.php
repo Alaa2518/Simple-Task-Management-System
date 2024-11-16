@@ -46,11 +46,15 @@ class TaskController extends Controller
     public function update(UpdateTaskRequest $request, Task $task)
     {
         try {
-            $task = $this->taskRepository->update($task, [
-                'title'       => $request->title,
-                'description' => $request->description,
-                'due_date'    => $request->due_date,
-            ]);
+            $data = array_filter([
+                                    'title'       => $request->title,
+                                    'description' => $request->description,
+                                    'due_date'    => $request->due_date,
+                                ], function ($value) {
+                                    return !is_null($value); 
+                                });
+
+        $task = $this->taskRepository->update($task, $data);
 
             return $this->successResponse($task, 'Task updated successfully.');
         } catch (Exception $e) {

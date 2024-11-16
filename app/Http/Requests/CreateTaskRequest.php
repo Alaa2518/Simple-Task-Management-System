@@ -28,7 +28,7 @@ class CreateTaskRequest extends FormRequest
         return [
                 'title'       => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'due_date'    => 'nullable|date',
+                'due_date'    => 'nullable|date|date_format:Y-m-d|after_or_equal:today',
         ];
     }
     /**
